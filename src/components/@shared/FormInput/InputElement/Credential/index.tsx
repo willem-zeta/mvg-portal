@@ -13,7 +13,10 @@ export default function Credentials(props: InputProps) {
   const [field, meta, helpers] = useField(props.name)
   const [addressList, setAddressList] = useState<string[]>(field.value || [])
   const [value, setValue] = useState('')
-  const { data: registryData } = usePontusXRegistry({ includeDeprecated: true })
+  const { data: registryData } = usePontusXRegistry({
+    includeDeprecated: true,
+    apiBaseUrl: 'https://dotsp-1.vm.bit.nl'
+  })
 
   useEffect(() => {
     helpers.setValue(addressList)

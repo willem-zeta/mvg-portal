@@ -5,7 +5,7 @@ export interface OpcFee {
   chainId: number
   swapNotApprovedFee: string
   swapApprovedFee: string
-  approvedTokens: string[]
+  approvedTokens: TokenInfo[]
 }
 
 export interface AppConfig {

@@ -180,19 +180,23 @@ export async function getOpcsApprovedTokens(
 
     // TODO: remove the mocked EUROe integration
     const { approvedTokens } = response.data.opcs[0]
+    const validTokens =
+      approvedTokens?.filter(
+        (token) => token && token.address && token.symbol
+      ) || []
     if (!Object.keys(tokenAddressesEUROe).includes(chainId.toString()))
-      return approvedTokens
+      return validTokens
 
     const oceanTokenAddress = chains.find(
       (chain) => chain.chainId === chainId
     )?.oceanTokenAddress
-    const approvedTokensWithoutOcean = approvedTokens.filter(
+    const approvedTokensWithoutOcean = validTokens.filter(
       (token) =>
         ethers.utils.getAddress(token.address) !==
         ethers.utils.getAddress(oceanTokenAddress)
     )
 
-    return approvedTokensWithoutOcean.includes(
+    return approvedTokensWithoutOcean.some(
       (token) =>
         ethers.utils.getAddress(token.address) ===
         ethers.utils.getAddress(tokenAddressesEUROe[chainId])

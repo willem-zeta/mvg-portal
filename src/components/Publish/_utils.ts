@@ -132,7 +132,8 @@ export async function transformPublishFormToDdo(
   // Those 2 are only passed during actual publishing process
   // so we can always assume if they are not passed, we are on preview.
   datatokenAddress?: string,
-  nftAddress?: string
+  nftAddress?: string,
+  signer?: any
 ): Promise<DDO> {
   const { metadata, services, policies, user } = values
   const { chainId, accountId } = user
@@ -251,7 +252,7 @@ export async function transformPublishFormToDdo(
     !isPreview &&
     files?.length &&
     (files[0].valid || files[0].type === 'saas') &&
-    (await getEncryptedFiles(file, chainId, providerUrl.url))
+    (await getEncryptedFiles(file, chainId, providerUrl.url, signer))
 
   const newService: Service = {
     id: getHash(datatokenAddress + filesEncrypted),

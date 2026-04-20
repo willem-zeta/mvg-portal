@@ -20,7 +20,7 @@ const chains = [
     gasFeeMultiplier: 1.1,
     providerUri: 'https://dotsp-1.vm.bit.nl:8030',
     providerAddress: '0xFc001e86876fC7F56e550AE873D96711b13615B6',
-    metadataCacheUri: 'https://aquarius.pontus-x.eu',
+    metadataCacheUri: 'https://dotsp-1.vm.bit.nl:8030',
     nodeUri: 'https://rpc.dev.pontus-x.eu',
     subgraphUri: 'https://subgraph.dev.pontus-x.eu',
     explorerUri: 'https://explorer.pontus-x.eu/pontusx/dev'
@@ -43,7 +43,7 @@ const chains = [
     gasFeeMultiplier: 1.1,
     providerUri: 'https://dotsp-1.vm.bit.nl:8030',
     providerAddress: '0xFc001e86876fC7F56e550AE873D96711b13615B6',
-    metadataCacheUri: 'https://aquarius.pontus-x.eu',
+    metadataCacheUri: 'https://dotsp-1.vm.bit.nl:8030',
     nodeUri: 'https://rpc.test.pontus-x.eu',
     subgraphUri: 'https://subgraph.test.pontus-x.eu',
     explorerUri: 'https://explorer.pontus-x.eu/pontusx/test'

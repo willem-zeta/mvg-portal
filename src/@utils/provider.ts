@@ -74,15 +74,42 @@ export async function initializeProviderForCompute(
 export async function getEncryptedFiles(
   files: any,
   chainId: number,
-  providerUrl: string
+  providerUrl: string,
+  signer?: any
 ): Promise<string> {
   try {
-    // https://github.com/oceanprotocol/provider/blob/v4main/API.md#encrypt-endpoint
-    const response = await ProviderInstance.encrypt(
-      files,
-      chainId,
-      customProviderUrl || providerUrl
-    )
+    const url = customProviderUrl || providerUrl
+    if (signer) {
+      const { ethers } = await import('ethers')
+      const accountId = await signer.getAddress()
+      const nonceRes = await fetch(
+        `${url}/api/services/nonce?userAddress=${accountId}`
+      )
+      const nonceData = await nonceRes.json()
+      const currentNonce = nonceData.nonce ?? nonceData
+      const nonce = (parseInt(currentNonce) + 1).toString()
+      const command = 'encrypt'
+      const messageToSign = accountId + nonce + command
+      const msgHash = ethers.utils.solidityKeccak256(
+        ['bytes'],
+        [ethers.utils.hexlify(ethers.utils.toUtf8Bytes(messageToSign))]
+      )
+      const msgHashBytes = ethers.utils.arrayify(msgHash)
+      const signature = await signer.signMessage(msgHashBytes)
+      const encRes = await fetch(
+        `${url}/api/services/encrypt?chainId=${chainId}&consumerAddress=${accountId}&nonce=${nonce}&signature=${encodeURIComponent(
+          signature
+        )}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/octet-stream' },
+          body: JSON.stringify(files)
+        }
+      )
+      if (!encRes.ok) throw new Error('Encrypt failed: ' + encRes.status)
+      return await encRes.text()
+    }
+    const response = await ProviderInstance.encrypt(files, chainId, url)
     return response
   } catch (error) {
     const message = getErrorMessage(error.message)
@@ -210,19 +237,19 @@ export async function getFileInfo(
       break
     }
     default: {
-      const fileUrl: UrlFile = {
-        type: 'url',
-        index: 0,
-        url: file,
-        headers: headersProvider,
-        method
-      }
       try {
-        response = await ProviderInstance.getFileInfo(
-          fileUrl,
-          customProviderUrl || providerUrl,
-          withChecksum
-        )
+        const providerEndpoint = customProviderUrl || providerUrl
+        const res = await fetch(`${providerEndpoint}/api/services/fileInfo`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'url',
+            url: file,
+            method: method || 'GET'
+          })
+        })
+        if (!res.ok) throw new Error(`HTTP error: ${res.status}`)
+        response = await res.json()
       } catch (error) {
         const message = getErrorMessage(error.message)
         LoggerInstance.error('[Provider Get File info] Error:', message)

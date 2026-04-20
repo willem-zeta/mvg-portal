@@ -1,4 +1,5 @@
 import { ReactElement, useState, useRef, useEffect } from 'react'
+import { ethers } from 'ethers'
 import { Form, Formik } from 'formik'
 import { initialPublishFeedback, initialValues } from './_constants'
 import { useAccountPurgatory } from '@hooks/useAccountPurgatory'
@@ -147,7 +148,8 @@ export default function PublishPage({
       const ddo = await transformPublishFormToDdo(
         values,
         datatokenAddress,
-        erc721Address
+        erc721Address,
+        signerToUse
       )
 
       if (!ddo) throw new Error('No DDO received. Please try again.')
@@ -157,12 +159,42 @@ export default function PublishPage({
 
       let ddoEncrypted: string
       try {
-        ddoEncrypted = await ProviderInstance.encrypt(
-          ddo,
-          ddo.chainId,
-          customProviderUrl || values.services[0].providerUrl.url,
-          newAbortController()
+        const providerUrl2 =
+          customProviderUrl || values.services[0].providerUrl.url
+
+        // Stap 1: haal nonce op
+        const nonceRes = await fetch(
+          `${providerUrl2}/api/services/nonce?userAddress=${accountId}`
         )
+        const nonceData = await nonceRes.json()
+        const currentNonce = nonceData.nonce ?? nonceData
+        const nonce = (parseInt(currentNonce) + 1).toString()
+
+        // Stap 2: sign exact zoals de node verwacht (ethers v5)
+        const command = 'encrypt'
+        const messageToSign = accountId + nonce + command
+        const msgHash = ethers.utils.solidityKeccak256(
+          ['bytes'],
+          [ethers.utils.hexlify(ethers.utils.toUtf8Bytes(messageToSign))]
+        )
+        const msgHashBytes = ethers.utils.arrayify(msgHash)
+        const signature = await signerToUse.signMessage(msgHashBytes)
+
+        // Stap 3: stuur als query parameters
+        const encRes = await fetch(
+          `${providerUrl2}/api/services/encrypt?chainId=${
+            ddo.chainId
+          }&consumerAddress=${accountId}&nonce=${nonce}&signature=${encodeURIComponent(
+            signature
+          )}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/octet-stream' },
+            body: JSON.stringify(ddo)
+          }
+        )
+        if (!encRes.ok) throw new Error('Encrypt failed: ' + encRes.status)
+        ddoEncrypted = await encRes.text()
       } catch (error) {
         const message = getErrorMessage(error.message)
         LoggerInstance.error('[Provider Encrypt] Error:', message)

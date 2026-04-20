@@ -2,7 +2,7 @@ import { gql } from 'urql'
 
 export const opcQuery = gql`
   query OpcQuery {
-    opc(id: 1) {
+    opcs {
       swapOceanFee
       swapNonOceanFee
       approvedTokens {

@@ -45,11 +45,16 @@ function MarketMetadataProvider({
         )
         opcData.push({
           chainId: appConfig.chainIdsSupported[i],
-          approvedTokens: response.data?.opc?.approvedTokens?.map(
-            (token) => token.address
+          approvedTokens: response.data?.opcs?.[0]?.approvedTokens?.map(
+            (token) => ({
+              address: token.address,
+              symbol: token.symbol,
+              name: token.name,
+              decimals: token.decimals
+            })
           ),
-          swapApprovedFee: response.data?.opc?.swapOceanFee,
-          swapNotApprovedFee: response.data?.opc?.swapNonOceanFee
+          swapApprovedFee: response.data?.opcs?.[0]?.swapOceanFee,
+          swapNotApprovedFee: response.data?.opcs?.[0]?.swapNonOceanFee
         } as OpcFee)
       }
       LoggerInstance.log('[MarketMetadata] Got new data.', {
@@ -67,7 +72,9 @@ function MarketMetadataProvider({
       if (!opcFees) return '0'
 
       const opc = opcFees.filter((x) => x.chainId === chainId)[0]
-      const isTokenApproved = opc.approvedTokens.includes(tokenAddress)
+      const isTokenApproved = opc.approvedTokens.some(
+        (token) => token.address === tokenAddress
+      )
       return isTokenApproved ? opc.swapApprovedFee : opc.swapNotApprovedFee
     },
     [opcFees]

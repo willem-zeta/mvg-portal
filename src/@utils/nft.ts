@@ -14,6 +14,44 @@ import { customProviderUrl } from '../../app.config'
 import { Signer, ethers } from 'ethers'
 import { toast } from 'react-toastify'
 
+async function encryptDDO(
+  asset: Asset | DDO,
+  providerUrl: string,
+  signer: Signer
+): Promise<string> {
+  const accountId = await signer.getAddress()
+  const nonceRes = await fetch(
+    `${providerUrl}/api/services/nonce?userAddress=${accountId}`
+  )
+  const nonceData = await nonceRes.json()
+  const currentNonce = nonceData.nonce ?? nonceData
+  const nonce = (parseInt(currentNonce) + 1).toString()
+
+  const command = 'encrypt'
+  const messageToSign = accountId + nonce + command
+  const msgHash = ethers.utils.solidityKeccak256(
+    ['bytes'],
+    [ethers.utils.hexlify(ethers.utils.toUtf8Bytes(messageToSign))]
+  )
+  const msgHashBytes = ethers.utils.arrayify(msgHash)
+  const signature = await signer.signMessage(msgHashBytes)
+
+  const encRes = await fetch(
+    `${providerUrl}/api/services/encrypt?chainId=${
+      asset.chainId
+    }&consumerAddress=${accountId}&nonce=${nonce}&signature=${encodeURIComponent(
+      signature
+    )}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/octet-stream' },
+      body: JSON.stringify(asset)
+    }
+  )
+  if (!encRes.ok) throw new Error('Encrypt failed: ' + encRes.status)
+  return await encRes.text()
+}
+
 // https://docs.opensea.io/docs/metadata-standards
 export interface NftMetadata {
   name: string
@@ -110,12 +148,8 @@ export async function setNftMetadata(
 ): Promise<ethers.providers.TransactionResponse> {
   let encryptedDdo
   try {
-    encryptedDdo = await ProviderInstance.encrypt(
-      asset,
-      asset.chainId,
-      customProviderUrl || asset.services[0].serviceEndpoint,
-      signal
-    )
+    const providerUrl = customProviderUrl || asset.services[0].serviceEndpoint
+    encryptedDdo = await encryptDDO(asset, providerUrl, signer)
   } catch (err) {
     const message = getErrorMessage(err.message)
     LoggerInstance.error('[Encrypt Data] Error:', message)
@@ -152,12 +186,8 @@ export async function setNFTMetadataAndTokenURI(
 ): Promise<ethers.providers.TransactionResponse> {
   let encryptedDdo
   try {
-    encryptedDdo = await ProviderInstance.encrypt(
-      asset,
-      asset.chainId,
-      customProviderUrl || asset.services[0].serviceEndpoint,
-      signal
-    )
+    const providerUrl = customProviderUrl || asset.services[0].serviceEndpoint
+    encryptedDdo = await encryptDDO(asset, providerUrl, signer)
   } catch (err) {
     const message = getErrorMessage(err.message)
     LoggerInstance.error('[Encrypt Data] Error:', message)
